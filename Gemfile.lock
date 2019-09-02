@@ -247,7 +247,7 @@ GEM
     websocket-driver (0.7.1)
       websocket-extensions (>= 0.1.0)
     websocket-extensions (0.1.4)
-    worksection-ruby (0.0.3)
+    worksection-ruby (0.0.402)
 
 PLATFORMS
   ruby

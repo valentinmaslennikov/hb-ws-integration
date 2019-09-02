@@ -4,10 +4,12 @@ class AdminUser < ApplicationRecord
   devise :database_authenticatable, 
          :recoverable, :rememberable, :validatable
 
-  has_and_belongs_to_many :projects
-
   def self.current
     Thread.current[:current_user]
+  end
+
+  def projects
+    Project.with_user_to(self)
   end
 
   def self.current=(usr)
