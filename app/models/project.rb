@@ -1,4 +1,8 @@
+require "worksection"
+
 class Project < ApplicationRecord
+  include ::ActiveRecordConcern
+
   #belongs_to :user_from, foreign_key: 'user_from_id', class_name: 'AdminUser'
   belongs_to :user_to, foreign_key: 'user_to_id', class_name: 'AdminUser'
 
@@ -7,13 +11,16 @@ class Project < ApplicationRecord
 
   validates :page, presence: true, uniqueness: true
 
-  def self.update_or_create(attributes)
-    assign_or_new(attributes).save
-  end
-
-  def self.assign_or_new(attributes)
-    obj = first || new
-    obj.assign_attributes(attributes)
-    obj
+  def self.build_projects_for_user(current_admin_user)
+    client = Worksection::Client.new(Rails.application.credentials.production[:domain_name],
+                                     Rails.application.credentials.production[:worksection_key])
+    user_projects = client.get_all_tasks.deep_symbolize_keys[:data]
+                        .select{|x| x[:user_to][:email].eql?(current_admin_user.email)}
+                        .reduce([]) do |sum,x|
+      x[:user_to] = current_admin_user
+      x.except!(:user_from, :date_added, :priority, :date_closed, :date_end, :tags, :date_start)
+      sum.push(x)
+    end
+    user_projects.map{|u_p| Project.where(page: u_p[:page]).update_or_create(u_p)}
   end
 end

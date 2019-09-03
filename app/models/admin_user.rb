@@ -12,6 +12,10 @@ class AdminUser < ApplicationRecord
     Project.with_user_to(self)
   end
 
+  def tasks
+    Task.with_user_to(self)
+  end
+
   def self.current=(usr)
     Thread.current[:current_user] = usr
   end
