@@ -1,5 +1,4 @@
 class Task < ApplicationRecord
-  include ::ActiveRecordConcern
 
   belongs_to :user_to, foreign_key: 'user_to_id', class_name: 'AdminUser'
 
@@ -32,6 +31,9 @@ class Task < ApplicationRecord
       x.except!(:user_from, :date_added, :priority, :date_closed, :date_end, :tags, :date_start)
       sum.push(x)
     end
-    user_tasks.map { |u_p| Task.where(page: u_p[:page]).update_or_create(u_p) }
+    user_tasks.map { |u_p| Task.where(page: u_p[:page]).first_or_create do |task|
+      task.update_attributes(u_p)
+    end
+    }
   end
 end
