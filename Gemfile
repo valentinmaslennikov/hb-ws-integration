@@ -36,6 +36,16 @@ gem 'jbuilder', '~> 2.5'
 # Reduces boot times through caching; required in config/boot.rb
 gem 'bootsnap', '>= 1.1.0', require: false
 
+gem 'httparty'
+gem 'activeadmin'
+gem 'devise'
+gem 'pundit'
+gem 'worksection-ruby'
+gem 'jquery-rails'
+
+# Windows does not include zoneinfo files, so bundle the tzinfo-data gem
+gem 'tzinfo-data', platforms: [:mingw, :mswin, :x64_mingw, :jruby]
+
 group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console
   gem 'byebug', platforms: [:mri, :mingw, :x64_mingw]
@@ -50,12 +60,10 @@ group :development do
   gem 'spring-watcher-listen', '~> 2.0.0'
 end
 
-gem 'httparty'
-gem 'activeadmin'
-gem 'devise'
-gem 'pundit'
-gem 'worksection-ruby'
-gem 'jquery-rails'
-
-# Windows does not include zoneinfo files, so bundle the tzinfo-data gem
-gem 'tzinfo-data', platforms: [:mingw, :mswin, :x64_mingw, :jruby]
+group :test do
+  gem 'rspec-rails'
+  gem 'database_cleaner'
+  gem 'factory_bot_rails', '~> 5.0'
+  gem 'faker'
+  gem 'webmock'
+end

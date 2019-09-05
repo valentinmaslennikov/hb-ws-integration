@@ -1,0 +1,22 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+
+development:
+  <<: *default
+  database: hb-worksection_development
+  username:
+  password:
+  host: 127.0.0.1
+  port: 5432
+
+test:
+  <<: *default
+  database: hb-worksection_test
+
+production:
+  <<: *default
+  database: hb-worksection_production
+  username: hb-worksection
+  password: <%= ENV['HB-WORKSECTION_DATABASE_PASSWORD'] %>
