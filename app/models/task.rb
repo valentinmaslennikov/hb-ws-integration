@@ -21,7 +21,16 @@ class Task < ApplicationRecord
     flatten_user_tasks
   end
 
-  def self.build_tasks_for_user(current_admin_user)
+  def self.clean_params(params)
+    clean_params = params.except!(:user_from, :date_added, :priority,
+                                  :date_closed, :date_end, :tags,
+                                  :date_start, :company, :max_money, :max_time)
+    clean_params[:user_to] = AdminUser.where(email: clean_params[:user_to][:email])
+                                 .first_or_create(email: clean_params[:user_to][:email], password: 'password')
+    clean_params
+  end
+
+  def self.build_tasks_for_current(user)
     client = Worksection::Client.new(Rails.application.credentials.production[:worksection][:domain_name],
                                      Rails.application.credentials.production[:worksection][:worksection_key])
     user_tasks = client.get_all_tasks({show_subtasks: 1}).deep_symbolize_keys[:data]
@@ -32,24 +41,17 @@ class Task < ApplicationRecord
     grouped_tasks = user_tasks.group_by{|x| x[:page].scan(/(\/project\/\d+\/)/).flatten[0]}
 
     selected_projects = projects.select{|x| x[:page][/#{grouped_tasks.keys}/]}
-    selected_projects.map{|s_p| Project.where(page: s_p[:page]).first_or_create do |project|
-      s_p[:user_to] = AdminUser.where(email: s_p[:user_to][:email])
-                          .first_or_create(email: s_p[:user_to][:email], password: 'password')
-      project.update_attributes(s_p.except!(:user_from, :date_added, :priority,
-                                            :date_closed, :date_end, :tags,
-                                            :date_start, :company, :max_money, :max_time))
-      project.tasks << grouped_tasks[project.page].map do |single_task|
-        Task.where(page: single_task[:page]).first_or_create do |task|
-          single_task.except!(:user_from, :date_added, :priority,
-                              :date_closed, :date_end, :tags,
-                              :date_start, :company, :max_time, :max_money)
-          single_task[:user_to] = AdminUser.where(email: single_task[:user_to][:email])
-                              .first_or_create(email: single_task[:user_to][:email], password: 'password')
-          task.update_attributes(single_task)
-        end
+    selected_projects.map do |s_p|
+      project_clean_params = clean_params(s_p)
+      project_ = Project.where(page: project_clean_params[:page]).first_or_create
+      project_.update_attributes(project_clean_params)
+      project_.tasks << grouped_tasks[project_.page].map do |single_task|
+        clean_params = clean_params(single_task).merge(project: project_)
+        task = Task.where(page: single_task[:page]).first_or_create
+        task.update(clean_params)
+        task
       end
     end
-    }
 =begin
     user_tasks.select { |x| x[:user_to][:email].eql?(current_admin_user.email) }
         .reduce([]) do |sum, x|

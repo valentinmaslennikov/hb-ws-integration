@@ -119,6 +119,6 @@ class HubstaffClient
   end
 
   def configs
-    @configs ||= Rails.application.credentials[Rails.env.to_sym][:hubstaff]
+    @configs ||= Rails.application.credentials[:production][:hubstaff]
   end
 end
