@@ -31,11 +31,30 @@ class Task < ApplicationRecord
   end
 
   def self.build_tasks_for_current(user)
+    organization_id = Rails.application.credentials[:production][:organization][:id]
+    habstaff_client = HubstaffClient.new
+    habstaff_projects = habstaff_client.organization_projects(user.access_token, organization_id).deep_symbolize_keys[:projects]
+    habstaff_tasks = habstaff_client.organization_tasks(user.access_token, organization_id).deep_symbolize_keys[:tasks]
+    active_hb_tasks = habstaff_tasks.reduce([]){|sum, i| i[:status].eql?('active') ? sum.push(i) : sum }
     client = Worksection::Client.new(Rails.application.credentials.production[:worksection][:domain_name],
                                      Rails.application.credentials.production[:worksection][:worksection_key])
-    user_tasks = client.get_all_tasks({show_subtasks: 1}).deep_symbolize_keys[:data]
-    user_tasks = flatten_hash(user_tasks)
+    ws_tasks = client.get_all_tasks({show_subtasks: 1}).deep_symbolize_keys[:data]
+    ws_tasks = flatten_hash(ws_tasks)
     #
+    #
+    active_ws_tasks = ws_tasks.reduce([]) do |sum, i|
+      i[:status].eql?('active') && i[:user_to][:email].eql?(user.email) ? sum.push(i) : sum
+    end
+    sync_tasks = active_hb_tasks.reduce([]){|sum, i| active_ws_tasks.select{ |x| x[:name].eql?(i[:summary])}.count > 0 ? sum.push(active_ws_tasks.select{ |x| x[:name].eql?(i[:summary])}) : sum}.flatten
+    unsync_tasks = active_ws_tasks - sync_tasks
+    ws_projects = client.get_projects.deep_symbolize_keys[:data]
+    grouped_by_projects = unsync_tasks.group_by{|x| x[:page].scan(/(\/project\/\d+\/)/).flatten[0]}
+    project_for_user_by_ws = ws_projects.select{|x| grouped_by_projects.keys.include? x[:page]}
+    sync_projects = habstaff_projects.reduce([]){|sum, i| project_for_user_by_ws.select{ |x| x[:name].eql?(i[:name])}.count > 0 ? sum.push(habstaff_projects.select{ |x| x[:name].eql?(i[:name])}) : sum}.flatten
+    unsync_projects = project_for_user_by_ws - sync_projects
+    unsync_projects.map{|i| habstaff_client.organization_project_create(user.access_token, organization_id, i[:name], [user])}
+
+=begin
     projects = client.get_projects.deep_symbolize_keys[:data]
 
     grouped_tasks = user_tasks.group_by{|x| x[:page].scan(/(\/project\/\d+\/)/).flatten[0]}
@@ -52,17 +71,6 @@ class Task < ApplicationRecord
         task
       end
     end
-=begin
-    user_tasks.select { |x| x[:user_to][:email].eql?(current_admin_user.email) }
-        .reduce([]) do |sum, x|
-      x[:user_to] = current_admin_user
-      x.except!(:user_from, :date_added, :priority, :date_closed, :date_end, :tags, :date_start)
-      sum.push(x)
-    end
-    user_tasks.map { |u_p| Task.where(page: u_p[:page]).first_or_create do |task|
-      task.update_attributes(u_p)
-    end
-    }
 =end
   end
 end

@@ -16,6 +16,15 @@ class HubstaffClient
     })
   end
 
+  def me access_token
+    HTTParty.get("https://api.hubstaff.com/v2/users/me", {
+        headers: {
+            Accept: 'application/json',
+            Authorization: "Bearer #{access_token}"
+        }
+    })
+  end
+
   def task_update access_token, task_id, title, assignee_id, lock_version
     HTTParty.put("https://api.hubstaff.com/v2/tasks/#{task_id}", {
       body: {

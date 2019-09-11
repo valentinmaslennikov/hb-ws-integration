@@ -1,9 +1,10 @@
 class OAuthController < ApplicationController
+
   AccessDenied = Class.new StandardError
 
   def create
     raise AccessDenied if params[:error].eql?('access_denied')
-    Setting.where(var: 'code').first_or_create.update(var: 'code', value: params[:code])
+    AdminUser.habstaff_token_sync(params)
     render 'o_auth/oauth'
   end
 
